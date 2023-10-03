@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+
+  start_dependencies:
+    image: dadarek/wait-for-dependencies
+    command: mysql:3306  # Specify what "start_dependencies" should wait for (e.g., MySQL)
+    depends_on:
+      - mysql  # This ensures "start_dependencies" waits for the "mysql" service
+    networks:
+      - demo-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: abcXYZ123$
+      MYSQL_USER: keycloak_user
+      MYSQL_PASSWORD: abcXYZ123$
+      MYSQL_DATABASE: keycloak
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d
+      - mysql-server-vol:/var/lib/mysql
+    networks:
+      - demo-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:22.0.3
+    ports:
+      - "8181:8080"
+    command:  -v start-dev --import-realm --http-relative-path /auth
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+      KC_DB: mysql
+      KC_DB_URL_HOST: mysql
+      KC_DB_URL_DATABASE: keycloak
+      KC_DB_URL_PORT: 3306
+      KC_DB_USERNAME: keycloak_user
+      KC_DB_PASSWORD: abcXYZ123$
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import
+    depends_on:
+      - start_dependencies  # Ensure that "keycloak" waits for "start_dependencies"
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+volumes:
+  mysql-server-vol:
